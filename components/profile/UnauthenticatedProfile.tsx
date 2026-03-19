@@ -6,8 +6,8 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 interface UnauthenticatedProfileProps {
-  token: string;
-  setToken: (token: string) => void;
+  token: string | null;
+  setToken: (token: string | null) => void;
   handleSaveToken: () => void;
   isLoading: boolean;
   error: string;
