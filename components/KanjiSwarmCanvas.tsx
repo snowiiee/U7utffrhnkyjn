@@ -296,6 +296,7 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   const hasMoved = useRef(false);
 
   useEffect(() => {
+    if (!positionVariable) return;
     const uniforms = positionVariable.material.uniforms;
     const tl = gsap.timeline();
 
@@ -333,6 +334,8 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   }, []);
 
   useFrame((state) => {
+    if (!gpuCompute || !positionVariable) return;
+    
     const elapsedTime = getElapsedTime();
     
     if (!hasMoved.current) {
@@ -359,10 +362,10 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   
   useEffect(() => {
     return () => {
-      gpuCompute.dispose();
+      gpuCompute?.dispose();
       material.dispose();
       particles.dispose();
-      material.uniforms.uTexture.value.dispose();
+      (material.uniforms.uTexture.value as THREE.Texture | null)?.dispose();
     };
   }, [gpuCompute, material, particles]);
   
