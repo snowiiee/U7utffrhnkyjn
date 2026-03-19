@@ -378,7 +378,7 @@ export default function KanjiSwarmCanvas({ exitProgressRef }: { exitProgressRef:
       <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 2]}>
         <color attach="background" args={['#000000']} />
         <Swarm exitProgressRef={exitProgressRef} />
-        <EffectComposer disableNormalPass>
+        <EffectComposer enableNormalPass={false}>
           <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={1.5} mipmapBlur />
         </EffectComposer>
       </Canvas>
