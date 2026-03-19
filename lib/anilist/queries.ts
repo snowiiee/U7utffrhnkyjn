@@ -711,7 +711,7 @@ export const saveMediaListEntry = async (variables: SaveMediaListEntryVariables,
     }
   `;
   try {
-    const data: any = await authenticatedRequest(mutation, variables, token);
+    const data: any = await authenticatedRequest(mutation, variables as unknown as Record<string, unknown>, token);
     return data.SaveMediaListEntry;
   } catch (error) {
     console.error('Error saving media list entry:', error);

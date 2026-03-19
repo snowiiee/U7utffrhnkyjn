@@ -232,6 +232,7 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
     const compute = new GPUComputationRenderer(size, size, gl);
     const dtPosition = compute.createTexture();
     const arr = dtPosition.image.data;
+    if (!arr) return { gpuCompute: null, positionVariable: null };
     for(let i=0; i<arr.length; i+=4) {
       arr[i] = (Math.random() - 0.5) * 0.05;
       arr[i+1] = 15.0 + (Math.random() - 0.5) * 0.05;
@@ -295,6 +296,7 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   const hasMoved = useRef(false);
 
   useEffect(() => {
+    if (!positionVariable) return;
     const uniforms = positionVariable.material.uniforms;
     const tl = gsap.timeline();
 
@@ -332,6 +334,8 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   }, []);
 
   useFrame((state) => {
+    if (!gpuCompute || !positionVariable) return;
+    
     const elapsedTime = getElapsedTime();
     
     if (!hasMoved.current) {
@@ -358,10 +362,10 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   
   useEffect(() => {
     return () => {
-      gpuCompute.dispose();
+      gpuCompute?.dispose();
       material.dispose();
       particles.dispose();
-      material.uniforms.uTexture.value.dispose();
+      (material.uniforms.uTexture.value as THREE.Texture | null)?.dispose();
     };
   }, [gpuCompute, material, particles]);
   
@@ -374,7 +378,7 @@ export default function KanjiSwarmCanvas({ exitProgressRef }: { exitProgressRef:
       <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 2]}>
         <color attach="background" args={['#000000']} />
         <Swarm exitProgressRef={exitProgressRef} />
-        <EffectComposer disableNormalPass>
+        <EffectComposer enableNormalPass={false}>
           <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={1.5} mipmapBlur />
         </EffectComposer>
       </Canvas>

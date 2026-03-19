@@ -11,7 +11,7 @@ import { MediaShelf } from '@/components/media/MediaShelf';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
 import { WhereToWatch } from '@/components/media/WhereToWatch';
-import { saveMediaListEntry, toggleFavourite, getViewerAndMediaUserData } from '@/lib/anilist/queries';
+import { saveMediaListEntry, toggleFavourite, getViewerAndMediaUserData, type MediaListStatus } from '@/lib/anilist/queries';
 import { useAuthStore } from '@/lib/store';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -40,7 +40,13 @@ export function AnimeDetailClient({ media }: { media: any }) {
 
   const { token, initializeAuth } = useAuthStore();
 
-  const [formState, setFormState] = useState({
+  const [formState, setFormState] = useState<{
+    status: MediaListStatus;
+    score: number;
+    progress: number;
+    repeat: number;
+    notes: string;
+  }>({
     status: 'CURRENT',
     score: 0,
     progress: 0,
@@ -66,7 +72,7 @@ export function AnimeDetailClient({ media }: { media: any }) {
           }
 
           if (mediaData) {
-            setIsFavourite(mediaData.isFavourite);
+            setIsFavourite(mediaData.isFavourite ?? false);
             if (mediaData.mediaListEntry) {
               setMediaEntry(mediaData.mediaListEntry);
               setFormState({
@@ -467,14 +473,14 @@ export function AnimeDetailClient({ media }: { media: any }) {
                   <div
                     className="dropdown-menu absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden"
                   >
-                    {[
+                    {([
                       { value: 'CURRENT', label: 'Watching' },
                       { value: 'PLANNING', label: 'Plan to watch' },
                       { value: 'COMPLETED', label: 'Completed' },
                       { value: 'REPEATING', label: 'Rewatching' },
                       { value: 'PAUSED', label: 'Paused' },
-                      { value: 'DROPPED', label: 'Dropped' }
-                    ].map((option) => (
+                      { value: 'DROPPED', label: 'Dropped' },
+                    ] as const).map((option) => (
                       <button
                         key={option.value}
                         onClick={() => {

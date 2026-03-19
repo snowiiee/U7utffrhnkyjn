@@ -215,13 +215,13 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
             />
             <Tooltip 
               content={<CustomTooltip />} 
-              cursor={{ fill: '#27272a', opacity: 0.4, radius: [100, 100, 100, 100] }} 
+              cursor={{ fill: '#27272a', opacity: 0.4 }} 
             />
             <Bar 
               dataKey="count" 
               radius={[6, 6, 6, 6]}
               barSize={32}
-              activeBar={{ radius: [100, 100, 100, 100], outline: 'none' }}
+              activeBar={{ fill: '#ffffff' }}
             >
               {barData.map((entry, index) => {
                 const rank = entry.count > 0 ? uniqueCounts.indexOf(entry.count) : -1;
@@ -259,7 +259,7 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
               stroke="#ffffff"
               strokeWidth={3}
               dot={{ r: 6, fill: '#ffffff', strokeWidth: 0 }}
-              activeDot={{ r: 8, fill: '#ffffff', outline: 'none' }}
+              activeDot={{ r: 8, fill: '#ffffff' }}
             >
               <LabelList dataKey="count" position="top" fill="#ffffff" fontSize={12} offset={10} />
             </Line>
