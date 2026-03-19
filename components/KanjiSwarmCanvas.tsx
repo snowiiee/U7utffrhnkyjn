@@ -218,6 +218,8 @@ function createKanjiTexture() {
 
 function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<number> }) {
   const { gl } = useThree();
+  const startTime = useRef(performance.now());
+  const getElapsedTime = () => (performance.now() - startTime.current) / 1000;
   
   const size = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -330,8 +332,10 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
   }, []);
 
   useFrame((state) => {
+    const elapsedTime = getElapsedTime();
+    
     if (!hasMoved.current) {
-      const t = state.clock.elapsedTime * 0.5;
+      const t = elapsedTime * 0.5;
       const ghostX = Math.sin(t) * 3.0 + Math.cos(t * 0.8) * 1.5;
       const ghostY = Math.cos(t * 1.2) * 2.0 + Math.sin(t * 0.5) * 1.0;
       mouse.current.lerp(new THREE.Vector3(ghostX, ghostY, 0), 0.05);
@@ -342,7 +346,7 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
       mouse.current.lerp(new THREE.Vector3(targetX, targetY, 0), 0.1);
     }
     
-    positionVariable.material.uniforms.uTime.value = state.clock.elapsedTime;
+    positionVariable.material.uniforms.uTime.value = elapsedTime;
     positionVariable.material.uniforms.uMouse.value = mouse.current;
     positionVariable.material.uniforms.uExitProgress.value = exitProgressRef.current;
     
