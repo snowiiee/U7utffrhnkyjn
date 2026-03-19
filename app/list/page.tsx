@@ -12,6 +12,7 @@ import { MediaCard } from '@/components/media/MediaCard';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
 import { Pill } from '@/components/ui/Pill';
 import { saveMediaListEntry } from '@/lib/anilist/queries';
+import { useAuthStore } from '@/lib/store';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(Flip);
@@ -101,14 +102,21 @@ export default function ListPage() {
   const observerTarget = useRef<HTMLDivElement>(null);
   const dealingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const { token: authToken, initializeAuth, isInitialized } = useAuthStore();
+
   // For GSAP context
   const { contextSafe } = useGSAP({ scope: containerRef });
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('anilist_token');
-    setToken(storedToken);
-    setIsAuthChecking(false);
-  }, []);
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized) {
+      setToken(authToken);
+      setIsAuthChecking(false);
+    }
+  }, [authToken, isInitialized]);
 
   useEffect(() => {
     if (!token) return;
