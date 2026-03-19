@@ -16,7 +16,6 @@ import {
   Radar,
   LineChart,
   Line,
-  LabelList,
   Cell,
 } from 'recharts';
 import { useGSAP } from '@gsap/react';
@@ -400,9 +399,7 @@ export function ProfileStats({ statistics, listEntries = [] }: ProfileStatsProps
               strokeWidth={3}
               dot={{ r: 6, fill: '#ffffff', strokeWidth: 0 }}
               activeDot={{ r: 8, fill: '#ffffff' }}
-            >
-              <LabelList dataKey="count" position="top" fill="#ffffff" fontSize={12} offset={10} />
-            </Line>
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
