@@ -285,7 +285,7 @@ export function UniversalToolkit({ children, media }: { children: React.ReactNod
                     REPEATING: 'Rewatching',
                     PAUSED: 'Paused',
                     DROPPED: 'Dropped'
-                  }[mediaEntry?.status || 'CURRENT'] || 'Select Status'}
+                  }[(mediaEntry?.status || 'CURRENT') as MediaListStatus] || 'Select Status'}
                 </span>
                 <ChevronDown className={`w-4 h-4 opacity-50 transition-transform ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
