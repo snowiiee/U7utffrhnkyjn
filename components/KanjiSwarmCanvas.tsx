@@ -232,6 +232,7 @@ function Swarm({ exitProgressRef }: { exitProgressRef: React.MutableRefObject<nu
     const compute = new GPUComputationRenderer(size, size, gl);
     const dtPosition = compute.createTexture();
     const arr = dtPosition.image.data;
+    if (!arr) return { gpuCompute: null, positionVariable: null };
     for(let i=0; i<arr.length; i+=4) {
       arr[i] = (Math.random() - 0.5) * 0.05;
       arr[i+1] = 15.0 + (Math.random() - 0.5) * 0.05;
