@@ -2,7 +2,7 @@
 'use client';
 import { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
-import { List, ArrowDownUp, Plus, Play, Check, Pause, X, Bookmark } from 'lucide-react';
+import { List, ArrowDownUp, Plus, Play, Check, Pause, X, Bookmark, Search } from 'lucide-react';
 import { SigilGhost } from '@/components/icons/SigilGhost';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -99,13 +99,37 @@ export default function ListPage() {
   const [dealOrigin, setDealOrigin] = useState<{centerX: number, centerY: number} | null>(null);
   const [visibleCount, setVisibleCount] = useState(24);
   const [isToolkitOpen, setIsToolkitOpen] = useState(false);
+  const [listQuery, setListQuery] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
   const dealingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { token: authToken, initializeAuth, isInitialized } = useAuthStore();
 
   // For GSAP context
   const { contextSafe } = useGSAP({ scope: containerRef });
+
+  // Search pill expand/collapse animation
+  useGSAP(() => {
+    if (!searchContainerRef.current) return;
+    if (isSearchExpanded) {
+      gsap.to(searchContainerRef.current, {
+        maxWidth: '32rem',
+        borderRadius: '1rem',
+        duration: 0.4,
+        ease: 'power3.out',
+      });
+    } else {
+      gsap.to(searchContainerRef.current, {
+        maxWidth: '14rem',
+        borderRadius: '9999px',
+        duration: 0.4,
+        ease: 'power3.out',
+      });
+    }
+  }, [isSearchExpanded]);
 
   useEffect(() => {
     initializeAuth();
@@ -201,6 +225,8 @@ export default function ListPage() {
       flushSync(() => {
         setActiveTab(newTab);
         setVisibleCount(24);
+        setListQuery('');
+        setIsSearchExpanded(false);
       });
       if (dealingTimeoutRef.current) clearTimeout(dealingTimeoutRef.current);
       dealingTimeoutRef.current = setTimeout(() => setIsDealing(false), 1300);
@@ -307,7 +333,18 @@ export default function ListPage() {
     return 0;
   });
 
-  const visibleEntries = sortedEntries.slice(0, visibleCount);
+  const filteredEntries = listQuery.trim()
+    ? sortedEntries.filter(entry => {
+        const q = listQuery.toLowerCase();
+        return (
+          entry.media.title.userPreferred?.toLowerCase().includes(q) ||
+          entry.media.title.romaji?.toLowerCase().includes(q) ||
+          entry.media.title.english?.toLowerCase().includes(q)
+        );
+      })
+    : sortedEntries;
+
+  const visibleEntries = filteredEntries.slice(0, visibleCount);
 
   useEffect(() => {
     const target = observerTarget.current;
@@ -324,7 +361,7 @@ export default function ListPage() {
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [visibleEntries.length, sortedEntries.length]);
+  }, [visibleEntries.length, filteredEntries.length]);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -437,9 +474,38 @@ export default function ListPage() {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div
+              ref={searchContainerRef}
+              className={`bg-zinc-800 flex items-center px-4 py-2.5 gap-3 transition-shadow ${isSearchExpanded ? 'ring-1 ring-white/10 shadow-xl shadow-black/40' : ''}`}
+              style={{ maxWidth: '14rem', borderRadius: '9999px', overflow: 'hidden' }}
+            >
+              <Search className="w-4 h-4 text-zinc-400 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={listQuery}
+                onChange={e => setListQuery(e.target.value)}
+                onFocus={() => setIsSearchExpanded(true)}
+                onBlur={() => { if (!listQuery) setIsSearchExpanded(false); }}
+                placeholder="Search list..."
+                className="flex-1 bg-transparent outline-none text-sm font-sans text-white placeholder:text-zinc-400 min-w-0"
+              />
+              {listQuery && (
+                <button
+                  onClick={() => { setListQuery(''); searchInputRef.current?.focus(); }}
+                  className="p-0.5 hover:bg-zinc-700 rounded-full transition-colors shrink-0"
+                >
+                  <X className="w-4 h-4 text-zinc-400" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Grid */}
           <div ref={gridRef} className="relative min-h-[50vh]">
-            {sortedEntries.length > 0 ? (
+            {filteredEntries.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                   {visibleEntries.map((entry, index) => (
@@ -455,7 +521,7 @@ export default function ListPage() {
                     />
                   ))}
                 </div>
-                {visibleCount < sortedEntries.length && (
+                {visibleCount < filteredEntries.length && (
                   <div ref={observerTarget} className="w-full h-20 mt-8 flex items-center justify-center">
                     <OrganicLoader className="w-8 h-8" />
                   </div>
