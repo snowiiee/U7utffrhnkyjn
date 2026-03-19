@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Plus, Loader2 } from 'lucide-react';
 import gsap from 'gsap';
-import { getViewerAndMediaUserData, saveMediaListEntry } from '@/lib/anilist/queries';
+import { getViewerAndMediaUserData, saveMediaListEntry, type MediaListStatus } from '@/lib/anilist/queries';
 import { useAuthStore } from '@/lib/store';
 
 export function UniversalToolkit({ children, media }: { children: React.ReactNode, media: any }) {
@@ -209,7 +209,7 @@ export function UniversalToolkit({ children, media }: { children: React.ReactNod
     try {
       const result = await saveMediaListEntry({
         mediaId: media.id,
-        status: newStatus,
+        status: newStatus as MediaListStatus,
         progress: mediaEntry?.progress || 0,
       }, token);
       setMediaEntry(result);
