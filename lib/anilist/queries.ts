@@ -31,6 +31,42 @@ const MEDIA_FRAGMENT = gql`
 `;
 
 // --- Helpers ---
+// Use server-side proxy for authenticated requests to hide token from browser
+async function authenticatedRequest<T>(query: string, variables: Record<string, unknown>, token: string): Promise<T> {
+  const isClient = typeof window !== 'undefined';
+  
+  if (isClient) {
+    // Use proxy on client-side to hide token
+    const response = await fetch('/api/anilist', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } else {
+    // Direct request on server-side
+    return request(ANILIST_ENDPOINT, query, variables, { Authorization: `Bearer ${token}` });
+  }
+}
+
+function sanitizeSearchInput(input: string): string {
+  // Remove potentially dangerous characters and limit length
+  return input
+    .trim()
+    .slice(0, 100) // Limit to 100 chars
+    .replace(/[<>{}[\]\\]/g, '') // Remove HTML/script injection chars
+    .replace(/\s+/g, ' '); // Normalize whitespace
+}
+
 function getCurrentSeason() {
   const month = new Date().getMonth(); // 0-11
   const year = new Date().getFullYear();
@@ -281,7 +317,7 @@ export const getViewerAndMediaUserData = async (mediaId: number, token: string):
     }
   `;
   try {
-    const data: any = await request(ANILIST_ENDPOINT, query, { mediaId }, { Authorization: `Bearer ${token}` });
+    const data: any = await authenticatedRequest(query, { mediaId }, token);
     return {
       viewer: data.Viewer,
       media: data.Media
@@ -433,8 +469,10 @@ export const searchMedia = async (search: string, filters: SearchFilters = {}): 
     }
   `;
 
+  const sanitizedSearch = search ? sanitizeSearchInput(search) : undefined;
+  
   const variables = {
-    search: search || undefined,
+    search: sanitizedSearch || undefined,
     type: filters.type || 'ANIME',
     genre_in: filters.genre?.length ? filters.genre : undefined,
     season: filters.season || undefined,
@@ -594,7 +632,7 @@ export const getViewer = async (token: string) => {
     }
   `;
   try {
-    const data: any = await request(ANILIST_ENDPOINT, query, undefined, { Authorization: `Bearer ${token}` });
+    const data: any = await authenticatedRequest(query, {}, token);
     return data.Viewer;
   } catch (error) {
     console.error('Error fetching viewer:', error);
@@ -630,7 +668,7 @@ export const getMediaUserData = async (mediaId: number, token: string) => {
     }
   `;
   try {
-    const data: any = await request(ANILIST_ENDPOINT, query, { mediaId }, { Authorization: `Bearer ${token}` });
+    const data: any = await authenticatedRequest(query, { mediaId }, token);
     return data.Media;
   } catch (error) {
     console.error('Error fetching media user data:', error);
@@ -673,7 +711,7 @@ export const saveMediaListEntry = async (variables: SaveMediaListEntryVariables,
     }
   `;
   try {
-    const data: any = await request(ANILIST_ENDPOINT, mutation, variables, { Authorization: `Bearer ${token}` });
+    const data: any = await authenticatedRequest(mutation, variables, token);
     return data.SaveMediaListEntry;
   } catch (error) {
     console.error('Error saving media list entry:', error);
@@ -694,7 +732,7 @@ export const toggleFavourite = async (animeId: number, token: string) => {
     }
   `;
   try {
-    const data: any = await request(ANILIST_ENDPOINT, mutation, { animeId }, { Authorization: `Bearer ${token}` });
+    const data: any = await authenticatedRequest(mutation, { animeId }, token);
     return data.ToggleFavourite;
   } catch (error) {
     console.error('Error toggling favourite:', error);
