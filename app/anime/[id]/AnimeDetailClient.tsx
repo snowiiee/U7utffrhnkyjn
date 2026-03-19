@@ -11,7 +11,7 @@ import { MediaShelf } from '@/components/media/MediaShelf';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
 import { WhereToWatch } from '@/components/media/WhereToWatch';
-import { saveMediaListEntry, toggleFavourite, getViewerAndMediaUserData } from '@/lib/anilist/queries';
+import { saveMediaListEntry, toggleFavourite, getViewerAndMediaUserData, type MediaListStatus } from '@/lib/anilist/queries';
 import { useAuthStore } from '@/lib/store';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -40,7 +40,13 @@ export function AnimeDetailClient({ media }: { media: any }) {
 
   const { token, initializeAuth } = useAuthStore();
 
-  const [formState, setFormState] = useState({
+  const [formState, setFormState] = useState<{
+    status: MediaListStatus;
+    score: number;
+    progress: number;
+    repeat: number;
+    notes: string;
+  }>({
     status: 'CURRENT',
     score: 0,
     progress: 0,
