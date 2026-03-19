@@ -478,7 +478,7 @@ export default function ListPage() {
           <div className="mb-6">
             <div
               ref={searchContainerRef}
-              className={`bg-zinc-800 flex items-center px-4 py-2.5 gap-3 transition-shadow ${isSearchExpanded ? 'ring-1 ring-white/10 shadow-xl shadow-black/40' : ''}`}
+              className={`bg-zinc-800 flex items-center px-4 py-3.5 gap-3 transition-shadow ${isSearchExpanded ? 'ring-1 ring-white/10 shadow-xl shadow-black/40' : ''}`}
               style={{ maxWidth: '14rem', borderRadius: '9999px', overflow: 'hidden' }}
             >
               <Search className="w-4 h-4 text-zinc-400 shrink-0" />
