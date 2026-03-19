@@ -106,6 +106,16 @@ const FULL_LIST_QUERY = gql`
         status
         entries {
           progress
+          startedAt {
+            year
+            month
+            day
+          }
+          completedAt {
+            year
+            month
+            day
+          }
           media {
             id
             title {
@@ -224,11 +234,20 @@ export default function ProfilePage() {
             data.Viewer.statistics.anime.startYears = calculatedStartYears;
           }
 
+          // Collect completed entries with startedAt and completedAt for Watch Pace
+          const completedListObj = lists.find((l: any) => l.status === 'COMPLETED');
+          const completedEntries = completedListObj ? completedListObj.entries.filter((entry: any) => 
+            entry.startedAt?.year && entry.completedAt?.year
+          ) : [];
+
+          setUserData({ ...data.Viewer, currentList, completedEntries });
+          return;
+
         } catch (e) {
           console.error("Failed to fetch user lists", e);
         }
         
-        setUserData({ ...data.Viewer, currentList });
+        setUserData({ ...data.Viewer, currentList: [], completedEntries: [] });
       } else {
         throw new Error('Invalid token');
       }
@@ -406,7 +425,10 @@ export default function ProfilePage() {
             )}
 
             {userData.statistics && (
-              <ProfileStats statistics={userData.statistics} />
+              <ProfileStats 
+                statistics={userData.statistics} 
+                listEntries={userData.completedEntries || []} 
+              />
             )}
           </div>
         </div>

@@ -25,6 +25,23 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
+interface FuzzyDate {
+  year: number | null;
+  month: number | null;
+  day: number | null;
+}
+
+interface ListEntry {
+  startedAt: FuzzyDate;
+  completedAt: FuzzyDate;
+  media: {
+    id: number;
+    title: {
+      userPreferred: string;
+    };
+  };
+}
+
 interface ProfileStatsProps {
   statistics: {
     anime: {
@@ -38,6 +55,7 @@ interface ProfileStatsProps {
       startYears: Array<{ startYear: number; count: number }>;
     };
   };
+  listEntries?: ListEntry[];
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -57,7 +75,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function ProfileStats({ statistics }: ProfileStatsProps) {
+export function ProfileStats({ statistics, listEntries = [] }: ProfileStatsProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef(0);
@@ -65,11 +83,13 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const totalSlides = 4;
+
   // Auto-play timer
   useEffect(() => {
     const timer = setInterval(() => {
       if (!isPaused) {
-        setCurrentSlide((prev) => (prev + 1) % 3);
+        setCurrentSlide((prev) => (prev + 1) % totalSlides);
       }
     }, 10000);
     return () => clearInterval(timer);
@@ -120,10 +140,10 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
     if (Math.abs(diff) > 50) { // Swipe threshold
       if (diff > 0) {
         // Swipe left -> Next
-        setCurrentSlide((prev) => (prev + 1) % 3);
+        setCurrentSlide((prev) => (prev + 1) % totalSlides);
       } else {
         // Swipe right -> Prev
-        setCurrentSlide((prev) => (prev - 1 + 3) % 3);
+        setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
       }
     }
 
@@ -165,6 +185,68 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
 
   const uniqueCounts = Array.from(new Set(barData.map(d => d.count).filter(c => c > 0))).sort((a, b) => b - a);
 
+  // --- Score Personality Insights ---
+  const GLOBAL_MEAN_SCORE = 68;
+  const totalRatings = barData.reduce((sum, d) => sum + d.count, 0);
+  
+  // Most given score (comfort zone)
+  const mostGivenScore = barData.reduce((max, d) => d.count > max.count ? d : max, { score: '0', count: 0 });
+  
+  // Percentage in 7-8 range
+  const midRangeCount = barData.filter(d => d.score === '7' || d.score === '8').reduce((sum, d) => sum + d.count, 0);
+  const midRangePercent = totalRatings > 0 ? Math.round((midRangeCount / totalRatings) * 100) : 0;
+  
+  // Scores never given
+  const neverGivenScores = barData.filter(d => d.count === 0).map(d => d.score);
+  
+  // Compare to global average
+  const userMeanScore = statistics.anime?.meanScore || 0;
+  const isHarshRater = userMeanScore < GLOBAL_MEAN_SCORE;
+
+  // --- Watch Pace Computations ---
+  const dateToMs = (d: FuzzyDate) => {
+    if (!d.year || !d.month || !d.day) return null;
+    return new Date(d.year, d.month - 1, d.day).getTime();
+  };
+
+  const completionData = listEntries
+    .map(entry => {
+      const startMs = dateToMs(entry.startedAt);
+      const endMs = dateToMs(entry.completedAt);
+      if (!startMs || !endMs || endMs < startMs) return null;
+      const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)));
+      return {
+        title: entry.media.title.userPreferred,
+        days,
+        completedAt: entry.completedAt,
+      };
+    })
+    .filter((d): d is { title: string; days: number; completedAt: FuzzyDate } => d !== null);
+
+  // Average days to finish
+  const avgDays = completionData.length > 0 
+    ? Math.round(completionData.reduce((sum, d) => sum + d.days, 0) / completionData.length) 
+    : 0;
+
+  // Fastest completion
+  const fastestCompletion = completionData.length > 0 
+    ? completionData.reduce((min, d) => d.days < min.days ? d : min, completionData[0])
+    : null;
+
+  // Day of week distribution
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayDistribution = dayNames.map(day => ({ day, count: 0 }));
+  
+  listEntries.forEach(entry => {
+    const ms = dateToMs(entry.completedAt);
+    if (ms) {
+      const dayIndex = new Date(ms).getDay();
+      dayDistribution[dayIndex].count++;
+    }
+  });
+  
+  const mostActiveDay = dayDistribution.reduce((max, d) => d.count > max.count ? d : max, { day: 'N/A', count: 0 });
+
   // Process Year Data for Area Chart
   // Sort by year ascending
   const areaData = [...startYears]
@@ -202,9 +284,9 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
   const ScoreContent = (
     <>
       <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider mb-4 w-full text-left">Score Distribution</h3>
-      <div className="w-full h-[250px]">
+      <div className="w-full h-[180px]">
         <ResponsiveContainer width="100%" height="100%" className="focus:outline-none">
-          <BarChart data={barData} style={{ outline: 'none' }} margin={{ top: 30, right: 0, left: 0, bottom: 0 }}>
+          <BarChart data={barData} style={{ outline: 'none' }} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
             <XAxis 
               dataKey="score" 
@@ -233,6 +315,32 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+      </div>
+      {/* Personality Insights */}
+      <div className="w-full mt-4 space-y-2">
+        {mostGivenScore.count > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-2xl font-bold text-white">{mostGivenScore.score}</span>
+            <span className="text-zinc-400">is your comfort zone</span>
+          </div>
+        )}
+        {midRangePercent > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-2xl font-bold text-white">{midRangePercent}%</span>
+            <span className="text-zinc-400">of your ratings are 7-8</span>
+          </div>
+        )}
+        {neverGivenScores.length > 0 && neverGivenScores.length <= 3 && (
+          <div className="text-sm text-zinc-400">
+            You have never given a <span className="text-white font-semibold">{neverGivenScores.join(', ')}</span>
+          </div>
+        )}
+        <div className="text-sm text-zinc-400">
+          {isHarshRater 
+            ? <span>You <span className="text-white font-semibold">rate harder</span> than most</span>
+            : <span>You are <span className="text-white font-semibold">generous</span> with scores</span>
+          }
+        </div>
       </div>
     </>
   );
@@ -269,7 +377,63 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
     </>
   );
 
-  const slides = [RadarContent, ScoreContent, EraContent];
+  const WatchPaceContent = (
+    <>
+      <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider mb-4 w-full text-left">Watch Pace</h3>
+      {completionData.length > 0 ? (
+        <div className="w-full flex flex-col gap-4">
+          {/* Hero Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            {fastestCompletion && (
+              <div className="bg-zinc-800/50 rounded-xl p-4">
+                <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Speedrun Record</div>
+                <div className="text-3xl font-bold text-white">{fastestCompletion.days} day{fastestCompletion.days !== 1 ? 's' : ''}</div>
+                <div className="text-xs text-zinc-400 mt-1 truncate" title={fastestCompletion.title}>{fastestCompletion.title}</div>
+              </div>
+            )}
+            <div className="bg-zinc-800/50 rounded-xl p-4">
+              <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Most Active Day</div>
+              <div className="text-3xl font-bold text-white">{mostActiveDay.day}</div>
+              <div className="text-xs text-zinc-400 mt-1">{mostActiveDay.count} completions</div>
+            </div>
+          </div>
+          
+          {/* Average completion time */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-zinc-400">Average finish time:</span>
+            <span className="text-white font-semibold">{avgDays} days</span>
+          </div>
+
+          {/* Day of week chart */}
+          <div className="w-full h-[100px]">
+            <ResponsiveContainer width="100%" height="100%" className="focus:outline-none">
+              <BarChart data={dayDistribution} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <XAxis 
+                  dataKey="day" 
+                  tick={{ fill: '#71717a', fontSize: 10 }} 
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#27272a', opacity: 0.4 }} />
+                <Bar dataKey="count" fill="#ffffff" radius={[4, 4, 4, 4]} barSize={24}>
+                  {dayDistribution.map((entry, index) => (
+                    <Cell 
+                      key={`day-cell-${index}`} 
+                      fill={entry.day === mostActiveDay.day ? '#ffffff' : 'rgba(255,255,255,0.3)'} 
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : (
+        <div className="text-zinc-500 text-sm">Not enough completion data available. Mark your start and end dates on AniList to see insights.</div>
+      )}
+    </>
+  );
+
+  const slides = [RadarContent, ScoreContent, EraContent, WatchPaceContent];
 
   return (
     <section ref={containerRef} className="py-6 md:py-10 relative">
@@ -325,8 +489,13 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
           </div>
 
           {/* Era Timeline */}
-          <div className="stats-card col-span-1 md:col-span-2 bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 flex flex-col items-center justify-center min-h-[300px] opacity-0">
+          <div className="stats-card bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 flex flex-col items-center justify-center min-h-[300px] opacity-0">
             {EraContent}
+          </div>
+
+          {/* Watch Pace */}
+          <div className="stats-card bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 flex flex-col items-center justify-center min-h-[300px] opacity-0">
+            {WatchPaceContent}
           </div>
         </div>
       </div>
