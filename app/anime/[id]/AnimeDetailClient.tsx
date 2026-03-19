@@ -66,7 +66,7 @@ export function AnimeDetailClient({ media }: { media: any }) {
           }
 
           if (mediaData) {
-            setIsFavourite(mediaData.isFavourite);
+            setIsFavourite(mediaData.isFavourite ?? false);
             if (mediaData.mediaListEntry) {
               setMediaEntry(mediaData.mediaListEntry);
               setFormState({
