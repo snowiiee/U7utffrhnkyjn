@@ -7,6 +7,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Button } from '@/components/ui/Button';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
+import { useAuthStore } from '@/lib/store';
 
 const KanjiSwarmCanvas = dynamic(() => import('@/components/KanjiSwarmCanvas'), { 
   ssr: false 
@@ -19,14 +20,21 @@ export default function LandingPage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCheckingToken, setIsCheckingToken] = useState(true);
 
+  const { token, initializeAuth, isInitialized } = useAuthStore();
+
   useEffect(() => {
-    const token = localStorage.getItem('anilist_token');
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    
     if (token) {
       router.push('/home');
     } else {
       setIsCheckingToken(false);
     }
-  }, [router]);
+  }, [token, isInitialized, router]);
 
   useGSAP(() => {
     if (isCheckingToken) return;

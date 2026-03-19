@@ -37,6 +37,8 @@ export async function GET(request: Request) {
     }
 
     const token = data.access_token;
+    const safeToken = JSON.stringify(token);
+    const targetOrigin = baseUrl || '*';
 
     // Return a script that sends the token back to the opener and closes the popup
     const html = `
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
         <body>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'ANILIST_AUTH_SUCCESS', token: '${token}' }, '*');
+              window.opener.postMessage({ type: 'ANILIST_AUTH_SUCCESS', token: ${safeToken} }, '${targetOrigin}');
               window.close();
             } else {
               window.location.href = '/profile';

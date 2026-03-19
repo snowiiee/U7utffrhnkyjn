@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ChevronDown, Plus, Loader2 } from 'lucide-react';
 import gsap from 'gsap';
 import { getViewerAndMediaUserData, saveMediaListEntry } from '@/lib/anilist/queries';
+import { useAuthStore } from '@/lib/store';
 
 export function UniversalToolkit({ children, media }: { children: React.ReactNode, media: any }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,17 +19,17 @@ export function UniversalToolkit({ children, media }: { children: React.ReactNod
   const [toolkitPos, setToolkitPos] = useState({ top: 0, left: 0, originX: 'left', originY: 'top' });
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [mediaEntry, setMediaEntry] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const { token, initializeAuth } = useAuthStore();
   const isTouchRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
-    setToken(localStorage.getItem('anilist_token'));
-  }, []);
+    initializeAuth();
+  }, [initializeAuth]);
 
   const handleTouchStart = () => {
     isTouchRef.current = true;
@@ -109,11 +110,10 @@ export function UniversalToolkit({ children, media }: { children: React.ReactNod
 
     gsap.to(cardRef.current, { scale: 0.95, duration: 0.3, ease: 'power2.out' });
     
-    const currentToken = localStorage.getItem('anilist_token');
-    if (currentToken && !mediaEntry) {
+    if (token && !mediaEntry) {
       setIsLoadingData(true);
       try {
-        const data = await getViewerAndMediaUserData(media.id, currentToken);
+        const data = await getViewerAndMediaUserData(media.id, token);
         if (data?.media?.mediaListEntry) {
           setMediaEntry(data.media.mediaListEntry);
         }

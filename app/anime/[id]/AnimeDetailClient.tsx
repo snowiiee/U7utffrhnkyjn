@@ -12,6 +12,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
 import { WhereToWatch } from '@/components/media/WhereToWatch';
 import { saveMediaListEntry, toggleFavourite, getViewerAndMediaUserData } from '@/lib/anilist/queries';
+import { useAuthStore } from '@/lib/store';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
@@ -33,10 +34,11 @@ export function AnimeDetailClient({ media }: { media: any }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isFavourite, setIsFavourite] = useState(false);
   const [mediaEntry, setMediaEntry] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [scoreFormat, setScoreFormat] = useState<string>('POINT_100');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isCheckingUser, setIsCheckingUser] = useState(true);
+
+  const { token, initializeAuth } = useAuthStore();
 
   const [formState, setFormState] = useState({
     status: 'CURRENT',
@@ -47,12 +49,15 @@ export function AnimeDetailClient({ media }: { media: any }) {
   });
 
   useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (token === null) return; // Not initialized yet
+    
     setIsCheckingUser(true);
-    const storedToken = localStorage.getItem('anilist_token');
-    if (storedToken) {
-      setToken(storedToken);
-      
-      getViewerAndMediaUserData(media.id, storedToken).then((data) => {
+    if (token) {
+      getViewerAndMediaUserData(media.id, token).then((data) => {
         if (data) {
           const { viewer, media: mediaData } = data;
           
@@ -80,7 +85,7 @@ export function AnimeDetailClient({ media }: { media: any }) {
     } else {
       setIsCheckingUser(false);
     }
-  }, [media.id]);
+  }, [media.id, token]);
 
   const handleSave = async () => {
     if (!token) return;

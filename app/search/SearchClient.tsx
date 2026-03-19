@@ -1,24 +1,47 @@
 // app/search/SearchClient.tsx
 'use client';
-import { useState, useTransition, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Search, X, ArrowLeft } from 'lucide-react';
-import { searchMedia } from '@/lib/anilist/queries';
+import { searchMedia, type Media, type SearchFilters as SearchFiltersType } from '@/lib/anilist/queries';
 import { MediaCard } from '@/components/media/MediaCard';
 import { SearchFilters } from './SearchFilters';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import useSWR from 'swr';
+import { useDebounce } from '@/lib/hooks/useDebounce';
+
+// SWR fetcher with search key
+const searchFetcher = async ([, query, filters]: [string, string, SearchFiltersType]): Promise<Media[]> => {
+  if (query.length < 3 && Object.keys(filters).length === 0) {
+    return [];
+  }
+  return searchMedia(query, filters);
+};
 
 export function SearchClient() {
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState({});
-  const [results, setResults] = useState<any[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [filters, setFilters] = useState<SearchFiltersType>({});
   const [isExpanded, setIsExpanded] = useState(false);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const filtersWrapperRef = useRef<HTMLDivElement>(null);
   const resultsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search query by 500ms to avoid rate limiting
+  const debouncedQuery = useDebounce(query, 500);
+  const debouncedFilters = useDebounce(filters, 500);
+
+  // SWR for caching and deduplication
+  const { data: results = [], isLoading: isPending } = useSWR(
+    ['search', debouncedQuery, debouncedFilters],
+    searchFetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Cache results for 1 minute
+      keepPreviousData: true,
+    }
+  );
 
   useGSAP(() => {
     if (!searchContainerRef.current || !filtersWrapperRef.current) return;
@@ -71,26 +94,10 @@ export function SearchClient() {
           duration: 0.4, 
           stagger: 0.05, 
           ease: 'power2.out',
-          // clearProps: 'all' // Removed to prevent reverting to opacity-0
         }
       );
     }
   }, { scope: resultsContainerRef, dependencies: [results, isPending] });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query.length > 2 || Object.keys(filters).length > 0) {
-        startTransition(async () => {
-          const data = await searchMedia(query, filters);
-          setResults(data);
-        });
-      } else {
-        setResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [query, filters]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
@@ -129,7 +136,7 @@ export function SearchClient() {
             />
             
             {(query || Object.keys(filters).length > 0) && (
-              <button onClick={() => { setQuery(''); setFilters({}); setResults([]); }} className="p-1 hover:bg-zinc-700 rounded-full transition-colors">
+              <button onClick={() => { setQuery(''); setFilters({}); }} className="p-1 hover:bg-zinc-700 rounded-full transition-colors">
                 <X className="w-5 h-5 text-zinc-400" />
               </button>
             )}
@@ -174,7 +181,7 @@ export function SearchClient() {
             </div>
           )}
 
-          {!isPending && (query.length > 2 || Object.keys(filters).length > 0) && results.length === 0 && (
+          {!isPending && (debouncedQuery.length > 2 || Object.keys(debouncedFilters).length > 0) && results.length === 0 && (
             <div className="text-center text-zinc-500 py-24 font-display text-2xl font-bold">
               No results found{query ? <span> for &quot;<span className="text-white">{query}</span>&quot;</span> : ''}
             </div>

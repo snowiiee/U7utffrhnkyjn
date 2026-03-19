@@ -15,6 +15,7 @@ import { MediaShelf } from '@/components/media/MediaShelf';
 import { OrganicLoader } from '@/components/ui/OrganicLoader';
 
 import { ProfileStats } from '@/components/profile/ProfileStats';
+import { useAuthStore } from '@/lib/store';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 
@@ -140,17 +141,21 @@ export default function ProfilePage() {
   const iconRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  const [token, setToken] = useState('');
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
   const shareCardRef = useRef<HTMLDivElement>(null);
 
+  const { token, setToken, initializeAuth, logout } = useAuthStore();
+
   useEffect(() => {
-    const storedToken = localStorage.getItem('anilist_token');
-    if (storedToken) {
-      validateAndFetchUser(storedToken);
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (token) {
+      validateAndFetchUser(token);
     } else {
       setIsLoading(false);
     }
@@ -159,7 +164,6 @@ export default function ProfilePage() {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'ANILIST_AUTH_SUCCESS' && event.data.token) {
         const newToken = event.data.token;
-        localStorage.setItem('anilist_token', newToken);
         setToken(newToken);
         validateAndFetchUser(newToken);
       }
@@ -167,7 +171,7 @@ export default function ProfilePage() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [token, setToken]);
 
   const validateAndFetchUser = async (accessToken: string) => {
     setIsLoading(true);
@@ -225,14 +229,13 @@ export default function ProfilePage() {
         }
         
         setUserData({ ...data.Viewer, currentList });
-        localStorage.setItem('anilist_token', accessToken);
       } else {
         throw new Error('Invalid token');
       }
     } catch (err) {
       console.error(err);
       setError('Invalid token. Please try again.');
-      localStorage.removeItem('anilist_token');
+      logout();
     } finally {
       setIsLoading(false);
     }
@@ -244,9 +247,8 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('anilist_token');
+    logout();
     setUserData(null);
-    setToken('');
   };
 
   const handleShare = async () => {
