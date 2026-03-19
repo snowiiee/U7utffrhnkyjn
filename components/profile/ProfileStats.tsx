@@ -215,7 +215,7 @@ export function ProfileStats({ statistics }: ProfileStatsProps) {
             />
             <Tooltip 
               content={<CustomTooltip />} 
-              cursor={{ fill: '#27272a', opacity: 0.4, radius: [100, 100, 100, 100] }} 
+              cursor={{ fill: '#27272a', opacity: 0.4 }} 
             />
             <Bar 
               dataKey="count" 
