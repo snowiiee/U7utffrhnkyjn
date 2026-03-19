@@ -257,10 +257,23 @@ export function ProfileStats({ statistics, listEntries = [] }: ProfileStatsProps
       count: y.count,
     }));
 
+  // --- Radar Personality Insights ---
+  const radarTotal = radarData.reduce((sum, d) => sum + d.A, 0);
+  const topGenre = radarData.length > 0 ? radarData.reduce((max, d) => d.A > max.A ? d : max, radarData[0]) : null;
+  const dominantPercent = radarTotal > 0 && topGenre ? Math.round((topGenre.A / radarTotal) * 100) : 0;
+  const radarMin = radarData.length > 0 ? Math.min(...radarData.map(d => d.A)) : 0;
+  const radarMax = radarData.length > 0 ? Math.max(...radarData.map(d => d.A)) : 0;
+  const radarSpread = radarMax > 0 ? ((radarMax - radarMin) / radarMax) * 100 : 0;
+  const tasteFocus = dominantPercent > 40
+    ? `laser focused on ${topGenre?.subject}`
+    : radarSpread < 20
+      ? 'genre agnostic'
+      : `leaning ${topGenre?.subject}`;
+
   const RadarContent = (
     <>
       <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider mb-4 w-full text-left">Taste Radar</h3>
-      <div className="w-full h-[250px]">
+      <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%" className="focus:outline-none">
           <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData} style={{ outline: 'none' }}>
             <PolarGrid stroke="#3f3f46" />
@@ -278,6 +291,17 @@ export function ProfileStats({ statistics, listEntries = [] }: ProfileStatsProps
           </RadarChart>
         </ResponsiveContainer>
       </div>
+      {radarData.length > 0 && (
+        <div className="w-full mt-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-white">{dominantPercent}%</span>
+            <span className="text-zinc-400 text-sm">of your top genres is {topGenre?.subject}</span>
+          </div>
+          <div className="text-sm text-zinc-400">
+            You are <span className="text-white font-semibold">{tasteFocus}</span>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -345,10 +369,18 @@ export function ProfileStats({ statistics, listEntries = [] }: ProfileStatsProps
     </>
   );
 
+  // --- Era Personality Insights ---
+  const peakEra = areaData.length > 0 ? areaData.reduce((max, d) => d.count > max.count ? d : max, areaData[0]) : null;
+  const uniqueDecades = new Set(areaData.map(d => Math.floor(parseInt(d.year) / 10) * 10)).size;
+  const post2020Count = areaData.filter(d => parseInt(d.year) >= 2021).reduce((sum, d) => sum + d.count, 0);
+  const eraTotal = areaData.reduce((sum, d) => sum + d.count, 0);
+  const recencyPercent = eraTotal > 0 ? Math.round((post2020Count / eraTotal) * 100) : 0;
+  const recencyLabel = recencyPercent > 60 ? 'certified modern fan' : recencyPercent < 30 ? 'classics digger' : null;
+
   const EraContent = (
     <>
       <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider mb-4 w-full text-left">Era Timeline</h3>
-      <div className="w-full h-[250px]">
+      <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%" className="focus:outline-none">
           <LineChart data={areaData} margin={{ top: 20, right: 20, left: 20, bottom: 0 }} style={{ outline: 'none' }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -374,6 +406,26 @@ export function ProfileStats({ statistics, listEntries = [] }: ProfileStatsProps
           </LineChart>
         </ResponsiveContainer>
       </div>
+      {areaData.length > 0 && (
+        <div className="w-full mt-4 space-y-2">
+          {peakEra && (
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-white">{peakEra.year}</span>
+              <span className="text-zinc-400 text-sm">was your peak era</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-white">{uniqueDecades}</span>
+            <span className="text-zinc-400 text-sm">decade{uniqueDecades !== 1 ? 's' : ''} of anime in your list</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-2xl font-bold text-white">{recencyPercent}%</span>
+            <span className="text-zinc-400 text-sm">
+              of your list is post-2020{recencyLabel ? ` — ${recencyLabel}` : ''}
+            </span>
+          </div>
+        </div>
+      )}
     </>
   );
 
